@@ -48,7 +48,29 @@
             "prepend": "",
             "pin": "",
             "record": false
+        },
+        {
+            "name": "",
+            "context": "rcm-out-rrr",
+            "enabled": true,
+            "mode": "whitelist",
+            "patterns": [
+                "_885"
+            ],
+            "whitelist": [
+                "2121"
+            ],
+            "groups": [],
+            "trunks": [
+                "FAG4108"
+            ],
+            "timeout": 30,
+            "time_limit_sec": 0,
+            "strip": 0,
+            "prepend": "",
+            "pin": "",
+            "record": false
         }
     ],
-    "updated_at": "2026-04-07T15:20:54+00:00"
+    "updated_at": "2026-04-08T11:11:48+00:00"
 }
