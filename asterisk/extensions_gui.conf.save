@@ -1,0 +1,21 @@
+; ================================
+; RCM GUI - Auto Generated
+; ================================
+
+[globals]
+RECORD_555=noo
+VM_555=On
+
+
+
+
+
+
+
+
+; RECORD_3001=in|out|noo
+; VM_3001=On|Off
+
+[internal]
+exten => 555,1,Goto(dexter,${EXTEN},1)
+; exten => 3001,1,Goto(dexter,${EXTEN},1)

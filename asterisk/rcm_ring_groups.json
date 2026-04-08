@@ -1,0 +1,33 @@
+{
+  "groups": [
+    {
+      "id": "8005",
+      "name": "test8005",
+      "strategy": "ringall",
+      "timeout": 20,
+      "per_try": 10,
+      "enabled": true,
+      "members": [
+        "2121",
+        "555"
+      ]
+    },
+    {
+      "id": "8999",
+      "name": "est",
+      "strategy": "ringall",
+      "timeout": 20,
+      "per_try": 10,
+      "enabled": true,
+      "members": [
+        "5001",
+        "5003",
+        "5004",
+        "5858",
+        "555",
+        "2121"
+      ]
+    }
+  ],
+  "updated_at": "2026-04-07T15:18:09+00:00"
+}

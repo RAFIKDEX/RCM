@@ -1,0 +1,95 @@
+
+//
+
+[from-internal-2222]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+[from-internal-2211]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+[from-internal-2121]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+[from-internal-2233]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+
+[from-internal-2001]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+
+[from-internal-2002]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+
+[from-internal-2200]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+
+[from-internal-555]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+
+[from-internal-5000]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+
+[from-internal-5001]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+
+[from-internal-5002]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+
+[from-internal-5004]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+
+[from-internal-5003]
+
+include => internal
+exten => _X.,1,Playback(pbx-invalid)
+
+--------------------------------------------
+
+
+
+[from-internal-9999]
+include => internal

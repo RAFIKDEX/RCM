@@ -1,0 +1,145 @@
+[5000]
+type=endpoint
+context=from-internal-5000
+disallow=all
+allow=alaw,ulaw
+aors=5000
+auth=5000
+transport=transport-udp
+;direct_media=no
+call_group=2
+pickup_group=2
+
+
+callerid="rafik" <5000>
+[5001]
+type=endpoint
+context=from-internal-5001
+disallow=all
+allow=alaw,ulaw
+aors=5001
+auth=5001
+transport=transport-udp
+;direct_media=no
+call_group=2
+pickup_group=2
+
+
+callerid="rafik" <5001>
+[5002]
+type=endpoint
+context=from-internal-5002
+disallow=all
+allow=alaw,ulaw
+aors=5002
+auth=5002
+transport=transport-udp
+;direct_media=no
+call_group=2
+pickup_group=2
+
+
+callerid="rafik" <5002>
+[5003]
+type=endpoint
+context=from-internal-5003
+disallow=all
+allow=alaw,ulaw
+aors=5003
+auth=5003
+transport=transport-udp
+;direct_media=no
+
+
+callerid="rafik" <5003>
+[5004]
+type=endpoint
+context=from-internal-5004
+disallow=all
+allow=alaw,ulaw
+aors=5004
+auth=5004
+transport=transport-udp
+;direct_media=no
+; --- RCM-TRUNK: 6363 BEGIN ---
+callerid="rafik" <5004>
+[6363]
+type=endpoint
+transport=transport-udp
+context=from-trunk
+disallow=all
+allow=alaw,ulaw
+aors=6363
+auth=6363-auth
+rewrite_contact=yes
+; --- RCM-TRUNK: 6363 END ---
+
+; --- RCM-TRUNK: FAG4108 BEGIN ---
+callerid="rafik" <6363>
+[FAG4108]
+type=endpoint
+transport=transport-udp
+context=from-pri
+disallow=all
+allow=ulaw,alaw
+aors=FAG4108
+; --- RCM-TRUNK: FAG4108 END ---
+
+
+[9999]
+type=endpoint
+context=from-internal-9999
+disallow=all
+allow=alaw,ulaw
+aors=9999
+auth=9999
+transport=transport-udp
+;direct_media=no
+
+
+callerid="rafik" <9999>
+[5858]
+type=endpoint
+context=from-internal-5858
+disallow=all
+allow=alaw,ulaw
+aors=5858
+auth=5858
+transport=transport-udp
+;direct_media=no
+
+; --- RCM-TRUNK: UCM BEGIN ---
+callerid="rafik" <5858>
+[UCM]
+type=endpoint
+transport=transport-udp
+context=from-pri
+disallow=all
+allow=ulaw,alaw
+aors=UCM
+; --- RCM-TRUNK: UCM END ---
+
+[555]
+type=endpoint
+context=from-internal-555
+disallow=all
+allow=alaw,ulaw
+aors=555
+auth=555
+transport=transport-udp
+callerid="rafik" <555>
+;direct_media=no
+
+
+
+[2121]
+type=endpoint
+context=from-internal-2121
+disallow=all
+allow=alaw,ulaw
+aors=2121
+auth=2121
+transport=transport-udp
+callerid="rafik" <2121>
+;direct_media=no
+

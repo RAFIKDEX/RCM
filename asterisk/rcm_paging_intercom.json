@@ -1,0 +1,50 @@
+{
+    "items": [
+        {
+            "id": "3698",
+            "name": "test",
+            "type": "paging",
+            "members": [
+                "555"
+            ],
+            "allowed_callers": [
+                "2121"
+            ],
+            "welcome_prompt": "p_f11719497dcd",
+            "enabled": true
+        },
+        {
+            "id": "258",
+            "name": "rrrr",
+            "type": "intercom",
+            "members": [
+                "2121",
+                "555"
+            ],
+            "allowed_callers": [
+                "555",
+                "2121"
+            ],
+            "welcome_prompt": "p_f11719497dcd",
+            "enabled": true
+        },
+        {
+            "id": "9632",
+            "name": "ttttooo",
+            "type": "paging",
+            "members": [
+                "555",
+                "2121",
+                "5001"
+            ],
+            "allowed_callers": [
+                "555",
+                "2121",
+                "6363"
+            ],
+            "welcome_prompt": "",
+            "enabled": true
+        }
+    ],
+    "updated_at": "2026-03-26T10:00:00+00:00"
+}

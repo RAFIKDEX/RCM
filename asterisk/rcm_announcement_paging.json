@@ -1,0 +1,27 @@
+{
+    "items": [
+        {
+            "id": "ann_69c5508bdd6c4",
+            "name": "tessss",
+            "prompt_id": "p_1f721193904e",
+            "prompt_name": "ramadan",
+            "prompt_path": "rcm/media/general/ramadan",
+            "members": [
+                "555"
+            ],
+            "play_count": 1,
+            "days": [
+                "Sun",
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "Fri",
+                "Sat"
+            ],
+            "time": "11:58",
+            "enabled": true
+        }
+    ],
+    "updated_at": "2026-03-30T09:56:22+00:00"
+}

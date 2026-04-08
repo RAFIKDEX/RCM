@@ -1,0 +1,27 @@
+{
+    "prompts": [
+        {
+            "id": "p_1f721193904e",
+            "name": "ramadan",
+            "title": "ramadan",
+            "type": "general",
+            "path": "/var/lib/asterisk/sounds/en/rcm/media/general/ramadan.wav",
+            "created_at": "2026-03-09T12:23:52+00:00"
+        },
+        {
+            "id": "p_f11719497dcd",
+            "name": "para",
+            "type": "general",
+            "path": "/var/lib/asterisk/sounds/en/rcm/media/general/para.wav",
+            "created_at": "2026-03-10T11:32:24+00:00"
+        }
+    ],
+    "moh_classes": [
+        {
+            "name": "hooold",
+            "mode": "files",
+            "dir": "/var/lib/asterisk/moh/rcm/hooold",
+            "created_at": "2026-03-09T12:24:37+00:00"
+        }
+    ]
+}
