@@ -127,7 +127,12 @@ $msg = $_GET["msg"] ?? "";
         <?php else: ?>
           <?php foreach ($routes as $r): ?>
             <?php
-              $name    = (string)($r["name"]    ?? "");
+$ctx     = (string)($r["context"] ?? "");
+$name    = (string)($r["name"] ?? "");
+// ?? name ????? ?????? ??? slug ?? ??? context
+if ($name === "" && str_starts_with($ctx, "rcm-out-")) {
+    $name = substr($ctx, 8);
+}
               $ctx     = (string)($r["context"] ?? "");
               $enabled = !empty($r["enabled"]);
               $mode    = (string)($r["mode"]    ?? "whitelist");
