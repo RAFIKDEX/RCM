@@ -3,11 +3,45 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+require_once __DIR__ . "/auth.php";
+rcm_require_login();
+
 require_once 'db_time.php';
 
-$CFG_FILE = "/etc/asterisk/extensions_gui.conf";
+/* =========================
+   Asterisk Sources
+========================= */
+$ASTERISK_DIR = "/etc/asterisk";
+$CFG_FILE = $ASTERISK_DIR . "/extensions_gui.conf";
+$F_ENDPOINT = $ASTERISK_DIR . "/pjsip.gui.endpoint.conf";
+$JSON_OUTBOUND = $ASTERISK_DIR . "/rcm_outbound_routes.json";
 
-function get_context_lines($file, $contextName){
+/* =========================
+   Helpers
+========================= */
+function h($s) {
+    return htmlspecialchars((string)$s, ENT_QUOTES, "UTF-8");
+}
+
+function read_file_safe($path) {
+    return file_exists($path) ? file_get_contents($path) : "";
+}
+
+function parse_marker_blocks($content) {
+    $blocks = [];
+    if (!$content) return $blocks;
+
+    $re = '/^\s*;\s*---\s*RCM-TRUNK:\s*([A-Za-z0-9_\-]+)\s*BEGIN\s*---\s*$([\s\S]*?)^\s*;\s*---\s*RCM-TRUNK:\s*\1\s*END\s*---\s*$/m';
+    if (preg_match_all($re, $content, $m, PREG_SET_ORDER)) {
+        foreach ($m as $hit) {
+            $blocks[$hit[1]] = $hit[2];
+        }
+    }
+
+    return $blocks;
+}
+
+function get_context_lines($file, $contextName) {
     if (!file_exists($file)) return [];
 
     $lines = file($file, FILE_IGNORE_NEW_LINES);
@@ -34,7 +68,7 @@ function get_context_lines($file, $contextName){
     return $result;
 }
 
-function get_all_context_names($file){
+function get_all_context_names($file) {
     if (!file_exists($file)) return [];
 
     $lines = file($file, FILE_IGNORE_NEW_LINES);
@@ -52,7 +86,7 @@ function get_all_context_names($file){
     return $names;
 }
 
-function parse_values_from_context($file, $contextName, $mode = "same"){
+function parse_values_from_context($file, $contextName, $mode = "same") {
     $lines = get_context_lines($file, $contextName);
     $values = [];
 
@@ -76,7 +110,7 @@ function parse_values_from_context($file, $contextName, $mode = "same"){
     return array_values($values);
 }
 
-function get_extension_values($file){
+function get_extension_values($file) {
     if (!file_exists($file)) return [];
 
     $lines = file($file, FILE_IGNORE_NEW_LINES);
@@ -108,39 +142,6 @@ function get_extension_values($file){
     return array_values($values);
 }
 
-function get_outbound_routes($file){
-    $contexts = get_all_context_names($file);
-    $routes = [];
-
-    foreach ($contexts as $ctx) {
-        if (preg_match('/^(out-|outrt-|route-|trunk-)/i', $ctx)) {
-            $routes[] = $ctx;
-        }
-    }
-
-    $routes = array_values(array_unique($routes));
-    natsort($routes);
-    return array_values($routes);
-}
-
-function get_trunks($file){
-    $contexts = get_all_context_names($file);
-    $trunks = [];
-
-    foreach ($contexts as $ctx) {
-        if (preg_match('/^trunk-/i', $ctx)) {
-            $trunks[] = $ctx;
-        }
-    }
-
-    $trunks = array_values(array_unique($trunks));
-    natsort($trunks);
-    return array_values($trunks);
-}
-
-$extensionList = get_extension_values($CFG_FILE);
-$JSON_FILE = "/etc/asterisk/rcm_outbound_routes.json";
-
 function rcm_load_json(string $jsonFile): array {
     if (!file_exists($jsonFile)) return ["routes" => []];
 
@@ -148,98 +149,82 @@ function rcm_load_json(string $jsonFile): array {
     $j = json_decode($raw, true);
 
     if (!is_array($j)) return ["routes" => []];
-
-    if (isset($j["routes"])) return $j;
+    if (isset($j["routes"]) && is_array($j["routes"])) return $j;
+    if (array_is_list($j)) return ["routes" => $j];
 
     return ["routes" => []];
 }
 
-$data = rcm_load_json($JSON_FILE);
-$outboundRoutes = [];
+/* =========================
+   Load Sources
+========================= */
 
-foreach ($data["routes"] as $r) {
-    if (!empty($r["name"])) {
-        $outboundRoutes[] = $r["name"];
-    }
-}
-
-sort($outboundRoutes, SORT_NATURAL);
-$F_ENDPOINT  = "/etc/asterisk/pjsip.gui.endpoint.conf";
-
-function read_file_safe($path) {
-    return file_exists($path) ? file_get_contents($path) : "";
-}
-
-function parse_marker_blocks($content) {
-    $blocks = [];
-    if (!$content) return $blocks;
-
-    $re = '/^\s*;\s*---\s*RCM-TRUNK:\s*([A-Za-z0-9_\-]+)\s*BEGIN\s*---\s*$([\s\S]*?)^\s*;\s*---\s*RCM-TRUNK:\s*\1\s*END\s*---\s*$/m';
-
-    if (preg_match_all($re, $content, $m, PREG_SET_ORDER)) {
-        foreach ($m as $hit) {
-            $blocks[$hit[1]] = $hit[2];
-        }
-    }
-
-    return $blocks;
-}
-
+/* Trunks from pjsip.gui.endpoint.conf */
 $endpoint_content = read_file_safe($F_ENDPOINT);
-$endpoint_blocks  = parse_marker_blocks($endpoint_content);
-
+$endpoint_blocks = parse_marker_blocks($endpoint_content);
 $trunkList = array_keys($endpoint_blocks);
-sort($trunkList, SORT_NATURAL);
+$trunkList = array_values(array_unique(array_filter($trunkList)));
+natsort($trunkList);
+$trunkList = array_values($trunkList);
 
-$ivrList = [];
+/* Destinations from extensions_gui.conf */
+$extensionList = get_extension_values($CFG_FILE);
+$allContexts = get_all_context_names($CFG_FILE);
+
 $queueList = [];
-$ringGroupList = [];
+$ivrList = [];
 $announcementList = [];
 
-$allContexts = get_all_context_names($CFG_FILE);
 foreach ($allContexts as $ctx) {
     if (preg_match('/^queue-\d+$/i', $ctx)) {
-        $num = preg_replace('/^queue-/i', '', $ctx);
-        $queueList[] = $num;
+        $queueList[] = preg_replace('/^queue-/i', '', $ctx);
     }
 
     if (preg_match('/^ivr-\d+$/i', $ctx)) {
-        $num = preg_replace('/^ivr-/i', '', $ctx);
-        $ivrList[] = $num;
+        $ivrList[] = preg_replace('/^ivr-/i', '', $ctx);
     }
 
     if (preg_match('/^ann-\d+$/i', $ctx)) {
-        $num = preg_replace('/^ann-/i', '', $ctx);
-        $announcementList[] = $num;
+        $announcementList[] = preg_replace('/^ann-/i', '', $ctx);
     }
 }
 
 $ringGroupList = parse_values_from_context($CFG_FILE, "rcm-ring-groups", "same");
 
-$ivrList = array_values(array_unique(array_filter($ivrList)));
-$queueList = array_values(array_unique(array_filter($queueList)));
-$ringGroupList = array_values(array_unique(array_filter($ringGroupList)));
-$announcementList = array_values(array_unique(array_filter($announcementList)));
 $extensionList = array_values(array_unique(array_filter($extensionList)));
-$trunkList = array_values(array_unique(array_filter($trunkList)));
-$outboundRoutes = array_values(array_unique(array_filter($outboundRoutes)));
+$queueList = array_values(array_unique(array_filter($queueList)));
+$ivrList = array_values(array_unique(array_filter($ivrList)));
+$announcementList = array_values(array_unique(array_filter($announcementList)));
+$ringGroupList = array_values(array_unique(array_filter($ringGroupList)));
 
-natsort($ivrList);
-natsort($queueList);
-natsort($ringGroupList);
-natsort($announcementList);
 natsort($extensionList);
-natsort($trunkList);
-natsort($outboundRoutes);
+natsort($queueList);
+natsort($ivrList);
+natsort($announcementList);
+natsort($ringGroupList);
 
-$ivrList = array_values($ivrList);
-$queueList = array_values($queueList);
-$ringGroupList = array_values($ringGroupList);
-$announcementList = array_values($announcementList);
 $extensionList = array_values($extensionList);
-$trunkList = array_values($trunkList);
+$queueList = array_values($queueList);
+$ivrList = array_values($ivrList);
+$announcementList = array_values($announcementList);
+$ringGroupList = array_values($ringGroupList);
+
+/* Outbound Routes from JSON */
+$outboundData = rcm_load_json($JSON_OUTBOUND);
+$outboundRoutes = [];
+
+foreach (($outboundData["routes"] ?? []) as $route) {
+    $name = trim((string)($route["name"] ?? ""));
+    if ($name !== "") {
+        $outboundRoutes[] = $name;
+    }
+}
+
+$outboundRoutes = array_values(array_unique(array_filter($outboundRoutes)));
+natsort($outboundRoutes);
 $outboundRoutes = array_values($outboundRoutes);
 
+/* Office Times / Holidays from DB */
 $office_times = [];
 $holidays = [];
 
@@ -257,6 +242,9 @@ if ($holiday_result) {
     }
 }
 
+/* =========================
+   Save
+========================= */
 $success_message = '';
 $error_message = '';
 
@@ -278,12 +266,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($trunk_name === '') {
         $error_message = 'Please select Trunk.';
     } elseif ($default_destination_type === '' || $default_destination_value === '') {
-        $error_message = 'Please choose Default Destination.';
+        $error_message = 'Please complete Default Destination.';
+    } elseif (!is_array($rules)) {
+        $error_message = 'Rules data is invalid.';
     } else {
-        if (!is_array($rules)) {
-            $rules = [];
-        }
-
         $conn_time->begin_transaction();
 
         try {
@@ -351,8 +337,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 foreach ($rules as $index => $rule) {
-                    $priority_order = (int)($index + 1);
-                    $condition_type = trim($rule['condition_type'] ?? '');
+                    $priority_order = $index + 1;
+                    $condition_type = trim((string)($rule['condition_type'] ?? ''));
+                    $destination_type = trim((string)($rule['destination_type'] ?? ''));
+                    $destination_value = trim((string)($rule['destination_value'] ?? ''));
+
                     $office_time_id = null;
                     $holiday_id = null;
                     $custom_time_from = null;
@@ -360,8 +349,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $custom_week_days = null;
                     $custom_months = null;
                     $custom_days = null;
-                    $destination_type = trim($rule['destination_type'] ?? '');
-                    $destination_value = trim($rule['destination_value'] ?? '');
 
                     if ($condition_type === '') {
                         throw new Exception('One rule has empty condition type.');
@@ -386,11 +373,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     if ($condition_type === 'specific_time') {
-                        $custom_time_from = trim($rule['custom_time_from'] ?? '');
-                        $custom_time_to = trim($rule['custom_time_to'] ?? '');
-                        $week_days_array = isset($rule['custom_week_days']) && is_array($rule['custom_week_days']) ? $rule['custom_week_days'] : [];
-                        $months_array = isset($rule['custom_months']) && is_array($rule['custom_months']) ? $rule['custom_months'] : [];
-                        $days_array = isset($rule['custom_days']) && is_array($rule['custom_days']) ? $rule['custom_days'] : [];
+                        $custom_time_from = trim((string)($rule['custom_time_from'] ?? ''));
+                        $custom_time_to = trim((string)($rule['custom_time_to'] ?? ''));
 
                         if ($custom_time_from === '' || $custom_time_to === '') {
                             throw new Exception('Specific Time rule requires From and To time.');
@@ -399,6 +383,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if ($custom_time_from >= $custom_time_to) {
                             throw new Exception('Specific Time From must be less than To.');
                         }
+
+                        $week_days_array = isset($rule['custom_week_days']) && is_array($rule['custom_week_days']) ? $rule['custom_week_days'] : [];
+                        $months_array = isset($rule['custom_months']) && is_array($rule['custom_months']) ? $rule['custom_months'] : [];
+                        $days_array = isset($rule['custom_days']) && is_array($rule['custom_days']) ? $rule['custom_days'] : [];
 
                         $custom_week_days = count($week_days_array) > 0 ? implode(',', $week_days_array) : null;
                         $custom_months = count($months_array) > 0 ? implode(',', $months_array) : null;
@@ -431,7 +419,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $conn_time->commit();
-            header("Location: add_inbound.php?success=1");
+            header("Location: /add_inbound.php?success=1");
             exit;
         } catch (Throwable $e) {
             $conn_time->rollback();
@@ -754,15 +742,16 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
 
     <div class="inner-box">
       <?php if ($success_message !== ''): ?>
-        <div class="msg"><?php echo htmlspecialchars($success_message); ?></div>
+        <div class="msg"><?php echo h($success_message); ?></div>
       <?php endif; ?>
 
       <?php if ($error_message !== ''): ?>
-        <div class="msg error"><?php echo htmlspecialchars($error_message); ?></div>
+        <div class="msg error"><?php echo h($error_message); ?></div>
       <?php endif; ?>
 
       <form method="POST" id="inboundForm">
         <input type="hidden" name="rules_json" id="rules_json">
+        <input type="hidden" name="default_destination_value" id="default_destination_value">
 
         <div class="builder-card">
           <h2 class="builder-title">INBOUND INFO</h2>
@@ -778,9 +767,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
               <select name="trunk_name" id="trunk_name" class="input">
                 <option value="">Select Trunk</option>
                 <?php foreach ($trunkList as $trunk): ?>
-                  <option value="<?php echo htmlspecialchars($trunk); ?>">
-                    <?php echo htmlspecialchars($trunk); ?>
-                  </option>
+                  <option value="<?php echo h($trunk); ?>"><?php echo h($trunk); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -829,7 +816,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
               <select id="default_extension_value" class="input">
                 <option value="">Select Extension</option>
                 <?php foreach ($extensionList as $x): ?>
-                  <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                  <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -839,7 +826,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
               <select id="default_queue_value" class="input">
                 <option value="">Select Queue</option>
                 <?php foreach ($queueList as $x): ?>
-                  <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                  <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -849,7 +836,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
               <select id="default_ring_group_value" class="input">
                 <option value="">Select Ring Group</option>
                 <?php foreach ($ringGroupList as $x): ?>
-                  <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                  <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -859,7 +846,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
               <select id="default_announcement_value" class="input">
                 <option value="">Select Announcement</option>
                 <?php foreach ($announcementList as $x): ?>
-                  <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                  <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -869,7 +856,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
               <select id="default_ivr_value" class="input">
                 <option value="">Select IVR</option>
                 <?php foreach ($ivrList as $x): ?>
-                  <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                  <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -879,13 +866,11 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
               <select id="default_dial_trunk_value" class="input">
                 <option value="">Select Outbound Route</option>
                 <?php foreach ($outboundRoutes as $x): ?>
-                  <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                  <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                 <?php endforeach; ?>
               </select>
             </div>
           </div>
-
-          <input type="hidden" name="default_destination_value" id="default_destination_value">
         </div>
 
         <div class="rules-card">
@@ -915,9 +900,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
                 <select id="office_time_id" class="input">
                   <option value="">Select Office Time</option>
                   <?php foreach ($office_times as $office_time): ?>
-                    <option value="<?php echo (int)$office_time['id']; ?>">
-                      <?php echo htmlspecialchars($office_time['name']); ?>
-                    </option>
+                    <option value="<?php echo (int)$office_time['id']; ?>"><?php echo h($office_time['name']); ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -927,9 +910,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
                 <select id="holiday_id" class="input">
                   <option value="">Select Holiday</option>
                   <?php foreach ($holidays as $holiday): ?>
-                    <option value="<?php echo (int)$holiday['id']; ?>">
-                      <?php echo htmlspecialchars($holiday['name']); ?>
-                    </option>
+                    <option value="<?php echo (int)$holiday['id']; ?>"><?php echo h($holiday['name']); ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -1011,7 +992,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
                 <select id="rule_extension_value" class="input">
                   <option value="">Select Extension</option>
                   <?php foreach ($extensionList as $x): ?>
-                    <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                    <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -1021,7 +1002,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
                 <select id="rule_queue_value" class="input">
                   <option value="">Select Queue</option>
                   <?php foreach ($queueList as $x): ?>
-                    <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                    <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -1031,7 +1012,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
                 <select id="rule_ring_group_value" class="input">
                   <option value="">Select Ring Group</option>
                   <?php foreach ($ringGroupList as $x): ?>
-                    <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                    <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -1041,7 +1022,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
                 <select id="rule_announcement_value" class="input">
                   <option value="">Select Announcement</option>
                   <?php foreach ($announcementList as $x): ?>
-                    <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                    <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -1051,7 +1032,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
                 <select id="rule_ivr_value" class="input">
                   <option value="">Select IVR</option>
                   <?php foreach ($ivrList as $x): ?>
-                    <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                    <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -1061,7 +1042,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
                 <select id="rule_dial_trunk_value" class="input">
                   <option value="">Select Outbound Route</option>
                   <?php foreach ($outboundRoutes as $x): ?>
-                    <option value="<?php echo htmlspecialchars($x); ?>"><?php echo htmlspecialchars($x); ?></option>
+                    <option value="<?php echo h($x); ?>"><?php echo h($x); ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -1173,21 +1154,21 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
 
       const officeTimeMap = {
         <?php
-        $office_pairs = [];
+        $officePairs = [];
         foreach ($office_times as $office_time) {
-            $office_pairs[] = (int)$office_time['id'] . ": " . json_encode($office_time['name']);
+            $officePairs[] = (int)$office_time['id'] . ': ' . json_encode($office_time['name']);
         }
-        echo implode(",\n", $office_pairs);
+        echo implode(",\n", $officePairs);
         ?>
       };
 
       const holidayMap = {
         <?php
-        $holiday_pairs = [];
+        $holidayPairs = [];
         foreach ($holidays as $holiday) {
-            $holiday_pairs[] = (int)$holiday['id'] . ": " . json_encode($holiday['name']);
+            $holidayPairs[] = (int)$holiday['id'] . ': ' . json_encode($holiday['name']);
         }
-        echo implode(",\n", $holiday_pairs);
+        echo implode(",\n", $holidayPairs);
         ?>
       };
 
@@ -1471,9 +1452,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
       });
 
       clearAllRulesBtn.addEventListener('click', function () {
-        if (rules.length === 0) {
-          return;
-        }
+        if (rules.length === 0) return;
 
         if (!confirm('Are you sure you want to clear all rules?')) {
           return;
@@ -1486,9 +1465,10 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
       form.addEventListener('submit', function (e) {
         const routeName = document.getElementById('route_name').value.trim();
         const trunkName = document.getElementById('trunk_name').value.trim();
-        const defaultDestinationTypeValue = defaultDestinationType.value;
+        const defaultType = defaultDestinationType.value;
+
         syncDefaultDestinationValue();
-        const defaultDestinationValueValue = defaultDestinationValue.value.trim();
+        const defaultValue = defaultDestinationValue.value.trim();
 
         if (routeName === '') {
           e.preventDefault();
@@ -1502,7 +1482,7 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
           return;
         }
 
-        if (defaultDestinationTypeValue === '' || defaultDestinationValueValue === '') {
+        if (defaultType === '' || defaultValue === '') {
           e.preventDefault();
           alert('Please complete Default Destination.');
           return;
