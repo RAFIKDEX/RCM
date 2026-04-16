@@ -20,7 +20,7 @@ git add -A
 # عمل commit و push لو في تغييرات
 if ! git diff --cached --quiet; then
     git commit -m "Auto backup: $TIMESTAMP"
-    git push origin php
+    git push origin RCM
     echo "[$TIMESTAMP] Pushed successfully"
 else
     echo "[$TIMESTAMP] No changes"
