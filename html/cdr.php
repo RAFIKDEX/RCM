@@ -11,7 +11,11 @@ $dbName = "asteriskcdr";
 $dbUser = "dexter";
 $dbPass = "admin";
 
-$PER_PAGE = 50;
+// *** تعديل: per_page من GET أو افتراضي 10 ***
+$ALLOWED_PER_PAGE = [10, 20, 50, 100];
+$PER_PAGE = (int)(isset($_GET['per_page']) ? $_GET['per_page'] : 10);
+if (!in_array($PER_PAGE, $ALLOWED_PER_PAGE)) $PER_PAGE = 10;
+
 $RECORD_BASE_DIR = "/var/spool/asterisk/monitor";
 $CEL_CSV_FILE    = "/var/log/asterisk/cel-custom/Master.csv";
 
@@ -530,6 +534,8 @@ $st = $pdo->prepare($countSql);
 $st->execute($params);
 $total = (int)($st->fetch()['c'] ?? 0);
 $totalPages = max(1, (int)ceil($total / $PER_PAGE));
+$page = min($page, $totalPages);
+$offset = ($page - 1) * $PER_PAGE;
 
 /* =========================================================
    LIST DISTINCT CALLS
@@ -562,6 +568,9 @@ foreach ($rows as &$r) {
     $r['_rec'] = recursive_find_recording($RECORD_BASE_DIR, detect_recording_tokens($r));
 }
 unset($r);
+
+$showing_from = $total === 0 ? 0 : $offset + 1;
+$showing_to   = min($offset + $PER_PAGE, $total);
 ?>
 <!doctype html>
 <html>
@@ -713,22 +722,10 @@ unset($r);
       margin-right:8px;
       border:1px solid rgba(255,255,255,.20);
     }
-    .st-ico.ok{
-      background:rgba(0,180,90,.18);
-      color:#7CFFB2;
-    }
-    .st-ico.warn{
-      background:rgba(255,165,0,.18);
-      color:#FFD27A;
-    }
-    .st-ico.bad{
-      background:rgba(220,40,40,.18);
-      color:#FF8C8C;
-    }
-    .st-ico.muted{
-      background:rgba(255,255,255,.10);
-      color:#D5DCE5;
-    }
+    .st-ico.ok{   background:rgba(0,180,90,.18);  color:#7CFFB2; }
+    .st-ico.warn{ background:rgba(255,165,0,.18); color:#FFD27A; }
+    .st-ico.bad{  background:rgba(220,40,40,.18); color:#FF8C8C; }
+    .st-ico.muted{background:rgba(255,255,255,.10);color:#D5DCE5;}
 
     .rec-btn{
       display:inline-flex;
@@ -744,130 +741,67 @@ unset($r);
       font-weight:900;
       letter-spacing:.5px;
     }
+    .rec-btn.has-rec{ background:rgba(0,180,90,.18);  color:#7CFFB2; }
+    .rec-btn.no-rec{  background:rgba(220,40,40,.18); color:#FF8C8C; }
+    .rec-btn.disabled{ opacity:.9; pointer-events:none; cursor:default; }
 
-    .rec-btn.has-rec{
-      background:rgba(0,180,90,.18);
-      color:#7CFFB2;
+    .detail-row{ display:none; background: rgba(255,255,255,.04); }
+    .detail-row.open{ display:table-row; }
+    .detail-cell{ padding:0 !important; border-bottom:1px solid rgba(255,255,255,0.18); }
+    .loading-box{ padding:18px; opacity:.85; }
+    .detail-wrap{ padding:16px; background: rgba(255,255,255,0.03); }
+    .detail-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:14px; }
+    .detail-card{ background: rgba(0,0,0,.18); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:14px; }
+    .detail-title{ font-family:'Orbitron',sans-serif; font-size:14px; margin-bottom:10px; letter-spacing:1px; text-transform:uppercase; }
+    .detail-line{ display:flex; gap:10px; justify-content:space-between; align-items:flex-start; padding:6px 0; border-bottom:1px dashed rgba(255,255,255,.08); }
+    .detail-line:last-child{ border-bottom:none; }
+    .detail-line span{ opacity:.8; min-width:110px; }
+    .detail-line b{ text-align:right; word-break:break-word; }
+    .journey-chain{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .journey-pill{ display:inline-block; padding:8px 12px; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); font-weight:700; font-size:12px; }
+    .journey-arrow{ opacity:.7; font-weight:900; }
+    .detail-empty, .detail-note, .detail-error{ opacity:.8; font-size:13px; }
+
+    /* *** تعديل: bottom bar *** */
+    .bottom-bar {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.12);
     }
 
-    .rec-btn.no-rec{
-      background:rgba(220,40,40,.18);
-      color:#FF8C8C;
-    }
+    .pager{ display:flex; gap:8px; flex-wrap:wrap; }
 
-    .rec-btn.disabled{
-      opacity:.9;
-      pointer-events:none;
-      cursor:default;
+    .per-page-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-
-    .detail-row{
-      display:none;
-      background: rgba(255,255,255,.04);
+    .per-page-wrap label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      opacity: .75;
+      text-transform: uppercase;
     }
-
-    .detail-row.open{
-      display:table-row;
-    }
-
-    .detail-cell{
-      padding:0 !important;
-      border-bottom:1px solid rgba(255,255,255,0.18);
-    }
-
-    .loading-box{
-      padding:18px;
-      opacity:.85;
-    }
-
-    .detail-wrap{
-      padding:16px;
-      background: rgba(255,255,255,0.03);
-    }
-
-    .detail-grid{
-      display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap:14px;
-    }
-
-    .detail-card{
-      background: rgba(0,0,0,.18);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:16px;
-      padding:14px;
-    }
-
-    .detail-title{
-      font-family:'Orbitron',sans-serif;
-      font-size:14px;
-      margin-bottom:10px;
-      letter-spacing:1px;
-      text-transform:uppercase;
-    }
-
-    .detail-line{
-      display:flex;
-      gap:10px;
-      justify-content:space-between;
-      align-items:flex-start;
-      padding:6px 0;
-      border-bottom:1px dashed rgba(255,255,255,.08);
-    }
-
-    .detail-line:last-child{
-      border-bottom:none;
-    }
-
-    .detail-line span{
-      opacity:.8;
-      min-width:110px;
-    }
-
-    .detail-line b{
-      text-align:right;
-      word-break:break-word;
-    }
-
-    .journey-chain{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-
-    .journey-pill{
-      display:inline-block;
-      padding:8px 12px;
-      border-radius:999px;
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.16);
-      font-weight:700;
-      font-size:12px;
-    }
-
-    .journey-arrow{
-      opacity:.7;
-      font-weight:900;
-    }
-
-    .detail-empty, .detail-note, .detail-error{
-      opacity:.8;
-      font-size:13px;
-    }
-
-    .pager{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-top:16px;
+    .per-page-wrap select {
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.10);
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
     }
 
     @media (max-width: 980px){
       th:nth-child(5), td:nth-child(5),
-      th:nth-child(8), td:nth-child(8){
-        display:none;
-      }
+      th:nth-child(8), td:nth-child(8){ display:none; }
     }
   </style>
 </head>
@@ -885,6 +819,7 @@ unset($r);
 
     <div class="card">
       <form method="get">
+        <input type="hidden" name="per_page" value="<?=esc((string)$PER_PAGE)?>">
         <div class="row">
           <div>
             <div class="muted tiny">From</div>
@@ -1010,36 +945,68 @@ unset($r);
         </table>
       </div>
 
-      <div class="pager">
-        <?php
-          $start = max(1, $page - 4);
-          $end = min($totalPages, $page + 4);
+      <!-- *** تعديل: bottom bar = total + pager + per-page selector *** -->
+      <div class="bottom-bar">
 
-          if ($page > 1) {
-            echo '<a class="btn btn2" href="?' . esc(qs_with(['page'=>$page-1])) . '">Prev</a>';
-          }
-          if ($start > 1) {
-            echo '<a class="btn btn2" href="?' . esc(qs_with(['page'=>1])) . '">1</a>';
-            if ($start > 2) echo '<span class="muted" style="padding:10px 6px">…</span>';
-          }
-          for ($p=$start; $p<=$end; $p++) {
-            if ($p === $page) echo '<span class="btn btn2" style="background:rgba(255,255,255,0.10)">' . $p . '</span>';
-            else echo '<a class="btn btn2" href="?' . esc(qs_with(['page'=>$p])) . '">' . $p . '</a>';
-          }
-          if ($end < $totalPages) {
-            if ($end < $totalPages - 1) echo '<span class="muted" style="padding:10px 6px">…</span>';
-            echo '<a class="btn btn2" href="?' . esc(qs_with(['page'=>$totalPages])) . '">' . $totalPages . '</a>';
-          }
-          if ($page < $totalPages) {
-            echo '<a class="btn btn2" href="?' . esc(qs_with(['page'=>$page+1])) . '">Next</a>';
-          }
-        ?>
-      </div>
+        <!-- Total info -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <span class="pill">TOTAL: <?=(int)$total?> calls</span>
+          <span class="pill">Showing <?=(int)$showing_from?>–<?=(int)$showing_to?></span>
+          <span class="pill">Page <?=(int)$page?> / <?=(int)$totalPages?></span>
+        </div>
+
+        <!-- Pager -->
+        <div class="pager">
+          <?php
+            $start = max(1, $page - 4);
+            $end = min($totalPages, $page + 4);
+
+            if ($page > 1)
+              echo '<a class="btn btn2" href="?' . esc(qs_with(['page'=>$page-1])) . '">Prev</a>';
+
+            if ($start > 1) {
+              echo '<a class="btn btn2" href="?' . esc(qs_with(['page'=>1])) . '">1</a>';
+              if ($start > 2) echo '<span class="muted" style="padding:10px 6px">…</span>';
+            }
+            for ($p=$start; $p<=$end; $p++) {
+              if ($p === $page)
+                echo '<span class="btn btn2" style="background:rgba(255,255,255,0.10)">' . $p . '</span>';
+              else
+                echo '<a class="btn btn2" href="?' . esc(qs_with(['page'=>$p])) . '">' . $p . '</a>';
+            }
+            if ($end < $totalPages) {
+              if ($end < $totalPages - 1) echo '<span class="muted" style="padding:10px 6px">…</span>';
+              echo '<a class="btn btn2" href="?' . esc(qs_with(['page'=>$totalPages])) . '">' . $totalPages . '</a>';
+            }
+            if ($page < $totalPages)
+              echo '<a class="btn btn2" href="?' . esc(qs_with(['page'=>$page+1])) . '">Next</a>';
+          ?>
+        </div>
+
+        <!-- Per page selector -->
+        <div class="per-page-wrap">
+          <label>Records / Page</label>
+          <select onchange="changePerPage(this.value)">
+            <?php foreach ([10, 20, 50, 100] as $n): ?>
+              <option value="<?=$n?>" <?=($PER_PAGE===$n?'selected':'')?> ><?=$n?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+      </div><!-- /bottom-bar -->
+
     </div>
   </div>
 </div>
 
 <script>
+function changePerPage(val) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('per_page', val);
+  url.searchParams.set('page', '1');
+  window.location.href = url.toString();
+}
+
 document.addEventListener('click', async function(e){
   const btn = e.target.closest('.expand-btn');
   if (!btn) return;
