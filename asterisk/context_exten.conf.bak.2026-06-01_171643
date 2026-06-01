@@ -5,6 +5,7 @@
 include => internal
 
 ; RCM-OUT-START
+include => rcm-out-rafik
 include => rcm-out-to_FEG
 ; RCM-OUT-END
 
@@ -43,23 +44,30 @@ include => internal
 [from-internal-2121]
 include => internal
 ; RCM-OUT-START
+include => rcm-out-ddd
+include => rcm-out-rafik
+include => rcm-out-rrr
 ; RCM-OUT-END
 
 
 [from-internal-3001]
 include => internal
 ; RCM-OUT-START
+include => rcm-out-rafik
 ; RCM-OUT-END
 
 [from-internal-555]
 include => internal
 ; RCM-OUT-START
+include => rcm-out-ddd
+include => rcm-out-rafik
 ; RCM-OUT-END
 
 
 [from-internal-5000]
 include => internal
 ; RCM-OUT-START
+include => rcm-out-rafik
 ; RCM-OUT-END
 
 

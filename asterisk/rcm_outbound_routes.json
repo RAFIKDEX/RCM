@@ -1,77 +1,6 @@
 {
     "routes": [
         {
-            "name": "rafik",
-            "context": "rcm-out-rafik",
-            "enabled": true,
-            "mode": "whitelist",
-            "patterns": [
-                "_66X."
-            ],
-            "whitelist": [
-                "555",
-                "2121",
-                "3001",
-                "5000",
-                "5001"
-            ],
-            "groups": [],
-            "trunks": [
-                "UCM"
-            ],
-            "timeout": 30,
-            "time_limit_sec": 0,
-            "strip": 2,
-            "prepend": "",
-            "pin": "",
-            "record": false
-        },
-        {
-            "name": "",
-            "context": "rcm-out-ddd",
-            "enabled": true,
-            "mode": "whitelist",
-            "patterns": [
-                "_22020"
-            ],
-            "whitelist": [
-                "555",
-                "2121"
-            ],
-            "groups": [],
-            "trunks": [
-                "UCM"
-            ],
-            "timeout": 30,
-            "time_limit_sec": 0,
-            "strip": 0,
-            "prepend": "",
-            "pin": "",
-            "record": false
-        },
-        {
-            "name": "",
-            "context": "rcm-out-rrr",
-            "enabled": true,
-            "mode": "whitelist",
-            "patterns": [
-                "_885"
-            ],
-            "whitelist": [
-                "2121"
-            ],
-            "groups": [],
-            "trunks": [
-                "FAG4108"
-            ],
-            "timeout": 30,
-            "time_limit_sec": 0,
-            "strip": 0,
-            "prepend": "",
-            "pin": "",
-            "record": false
-        },
-        {
             "name": "",
             "context": "rcm-out-to_FEG",
             "enabled": true,
@@ -96,5 +25,5 @@
             "record": false
         }
     ],
-    "updated_at": "2026-06-01T07:58:15+00:00"
+    "updated_at": "2026-06-01T14:16:48+00:00"
 }
