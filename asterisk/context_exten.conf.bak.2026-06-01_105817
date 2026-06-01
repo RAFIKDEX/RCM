@@ -6,14 +6,12 @@ include => internal
 
 ; RCM-OUT-START
 include => rcm-out-rafik
-include => rcm-out-to_FEG
 ; RCM-OUT-END
 
 [from-internal-5002]
 include => internal
 
 ; RCM-OUT-START
-include => rcm-out-to_FEG
 ; RCM-OUT-END
 
 [from-internal-5004]

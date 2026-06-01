@@ -70,7 +70,31 @@
             "prepend": "",
             "pin": "",
             "record": false
+        },
+        {
+            "name": "",
+            "context": "rcm-out-to_FEG",
+            "enabled": true,
+            "mode": "whitelist",
+            "patterns": [
+                "_01X."
+            ],
+            "whitelist": [
+                "5001",
+                "5002",
+                "5003"
+            ],
+            "groups": [],
+            "trunks": [
+                "GSM"
+            ],
+            "timeout": 30,
+            "time_limit_sec": 0,
+            "strip": 0,
+            "prepend": "",
+            "pin": "",
+            "record": false
         }
     ],
-    "updated_at": "2026-04-08T11:11:48+00:00"
+    "updated_at": "2026-06-01T07:58:15+00:00"
 }
